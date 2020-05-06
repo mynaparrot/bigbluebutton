@@ -134,18 +134,34 @@ class RedisPubSub {
 
     const channelsToSubscribe = this.config.subscribeTo;
 
-    channelsToSubscribe.forEach((channel) => {
-      this.sub.psubscribe(channel);
-    });
+    switch (process.env.METEOR_ROLE) {
+      case 'backend':
+        channelsToSubscribe.forEach((channel) => {
+          this.sub.psubscribe(channel);
+        });
+        break;
+      case 'whiteboard':
+        this.sub.psubscribe('from-akka-apps-wb-redis-channel-sync');
+        break;
+      default:
+        channelsToSubscribe.forEach((channel) => {
+          this.sub.psubscribe(channel);
+          this.sub.psubscribe('from-akka-apps-*');
+        });
+        break;
+    }
 
     this.debug(`Subscribed to '${channelsToSubscribe}'`);
+  }
+
+  meetingWhiteboardSubscribe(channel) {
+    this.sub.psubscribe(channel);
   }
 
   updateConfig(config) {
     this.config = Object.assign({}, this.config, config);
     this.debug = makeDebugger(this.config.debug);
   }
-
 
   // TODO: Move this out of this class, maybe pass as a callback to init?
   handleSubscribe() {
@@ -250,8 +266,10 @@ const RedisPubSubSingleton = new RedisPubSub();
 Meteor.startup(() => {
   const REDIS_CONFIG = Meteor.settings.private.redis;
 
-  RedisPubSubSingleton.updateConfig(REDIS_CONFIG);
-  RedisPubSubSingleton.init();
+  if (!process.env.METEOR_ROLE || process.env.METEOR_ROLE !== 'frontend') {
+    RedisPubSubSingleton.updateConfig(REDIS_CONFIG);
+    RedisPubSubSingleton.init();
+  }
 });
 
 export default RedisPubSubSingleton;

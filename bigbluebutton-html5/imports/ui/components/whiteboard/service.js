@@ -2,7 +2,9 @@ import Users from '/imports/api/users';
 import Auth from '/imports/ui/services/auth';
 import WhiteboardMultiUser from '/imports/api/whiteboard-multi-user/';
 import addAnnotationQuery from '/imports/api/annotations/addAnnotation';
-import { makeCall } from '/imports/ui/services/api';
+import { whiteboardCall } from '/imports/ui/services/api';
+import { whiteboardConnection } from '/imports/ui/components/app/service';
+import { makeCall } from '../../services/api';
 
 const Annotations = new Mongo.Collection(null);
 const UnsentAnnotations = new Mongo.Collection(null);
@@ -58,7 +60,17 @@ export function initAnnotationsStreamListener() {
    * The problem was caused because we add handlers to stream before the onStop event happens,
    * which set the handlers to undefined.
    */
-  annotationsStreamListener = new Meteor.Streamer(`annotations-${Auth.meetingID}`, { retransmit: false });
+  if (Meteor.settings.public.role) {
+    if (whiteboardConnection.status().connected) {
+      annotationsStreamListener = new Meteor.Streamer(`annotations-${Auth.meetingID}`, { ddpConnection: whiteboardConnection });
+
+      whiteboardCall('authenticateWhiteboardConnection');
+    } else {
+      return;
+    }
+  } else {
+    annotationsStreamListener = new Meteor.Streamer(`annotations-${Auth.meetingID}`);
+  }
 
   const startStreamHandlersPromise = new Promise((resolve) => {
     const checkStreamHandlersInterval = setInterval(() => {
@@ -97,8 +109,8 @@ function increaseBrightness(realHex, percent) {
 
   /* eslint-disable no-bitwise, no-mixed-operators */
   return parseInt(((0 | (1 << 8) + r + ((256 - r) * percent) / 100).toString(16)).substr(1)
-     + ((0 | (1 << 8) + g + ((256 - g) * percent) / 100).toString(16)).substr(1)
-     + ((0 | (1 << 8) + b + ((256 - b) * percent) / 100).toString(16)).substr(1), 16);
+    + ((0 | (1 << 8) + g + ((256 - g) * percent) / 100).toString(16)).substr(1)
+    + ((0 | (1 << 8) + b + ((256 - b) * percent) / 100).toString(16)).substr(1), 16);
   /* eslint-enable no-bitwise, no-mixed-operators */
 }
 
@@ -122,8 +134,11 @@ const proccessAnnotationsQueue = async () => {
 
   const annotations = annotationsQueue.splice(0, queueSize);
 
-  // console.log('annotationQueue.length', annotationsQueue, annotationsQueue.length);
-  await makeCall('sendBulkAnnotations', annotations);
+  if (Meteor.settings.public.role) {
+    await whiteboardCall('sendBulkAnnotations', annotations);
+  } else {
+    await makeCall('sendBulkAnnotations', annotations);
+  }
 
   // ask tiago
   const delayPerc = Math.min(annotationsMaxDelayQueueSize, queueSize) / annotationsMaxDelayQueueSize;

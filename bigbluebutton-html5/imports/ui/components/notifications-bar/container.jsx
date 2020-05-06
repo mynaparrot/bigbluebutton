@@ -9,6 +9,7 @@ import Users from '/imports/api/users';
 import BreakoutRemainingTime from '/imports/ui/components/breakout-room/breakout-remaining-time/container';
 import SlowConnection from '/imports/ui/components/slow-connection/component';
 import { styles } from './styles.scss';
+import { whiteboardConnection } from '/imports/ui/components/app/service';
 
 import breakoutService from '/imports/ui/components/breakout-room/service';
 import NotificationsBar from './component';
@@ -82,6 +83,10 @@ const intlMessages = defineMessages({
     id: 'app.network.connection.effective.slow.help',
     description: 'Help link for slow connections',
   },
+  whiteboardConnectionOffline: {
+    id: 'app.whiteboard.connection.offline',
+    description: 'Warning message when whiteboard is offline',
+  },
 });
 
 const NotificationsBarContainer = (props) => {
@@ -144,6 +149,11 @@ export default injectIntl(withTracker(({ intl }) => {
         </SlowConnection>
       );
     }
+  }
+
+  if (Meteor.settings.public.role && !whiteboardConnection.status().connected) {
+    data.color = 'danger';
+    data.message = intl.formatMessage(intlMessages.whiteboardConnectionOffline);
   }
 
   if (!connected) {

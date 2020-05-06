@@ -1,4 +1,5 @@
 import Auth from '/imports/ui/services/auth';
+import { whiteboardConnection } from '/imports/ui/components/app/service';
 import { throttle } from 'lodash';
 import logger from '/imports/startup/client/logger';
 
@@ -40,12 +41,11 @@ export function initCursorStreamListener() {
     extraInfo: { meetingId: Auth.meetingID, userId: Auth.userID },
   }, 'initCursorStreamListener called');
 
-  /**
-  * We create a promise to add the handlers after a ddp subscription stop.
-  * The problem was caused because we add handlers to stream before the onStop event happens,
-  * which set the handlers to undefined.
-  */
-  cursorStreamListener = new Meteor.Streamer(`cursor-${Auth.meetingID}`, { retransmit: false });
+  if (Meteor.settings.public.role) {
+    cursorStreamListener = new Meteor.Streamer(`cursor-${Auth.meetingID}`, { ddpConnection: whiteboardConnection });
+  } else {
+    cursorStreamListener = new Meteor.Streamer(`cursor-${Auth.meetingID}`);
+  }
 
   const startStreamHandlersPromise = new Promise((resolve) => {
     const checkStreamHandlersInterval = setInterval(() => {

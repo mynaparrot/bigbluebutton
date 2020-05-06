@@ -9,6 +9,7 @@ import createNote from '/imports/api/note/server/methods/createNote';
 import createCaptions from '/imports/api/captions/server/methods/createCaptions';
 import { addAnnotationsStreamer } from '/imports/api/annotations/server/streamer';
 import { addCursorStreamer } from '/imports/api/cursor/server/streamer';
+import RedisPubSub from '/imports/startup/server/redis';
 
 export default function addMeeting(meeting) {
   const meetingId = meeting.meetingProp.intId;
@@ -87,6 +88,19 @@ export default function addMeeting(meeting) {
       lockedLayout: Boolean,
     },
   });
+
+  if (!process.env.METEOR_ROLE) {
+    addAnnotationsStreamer(meetingId);
+    addCursorStreamer(meetingId);
+  } else if (process.env.METEOR_ROLE === 'whiteboard') {
+    addAnnotationsStreamer(meetingId);
+    addCursorStreamer(meetingId);
+
+    Logger.info(`Subscribing to from-akka-apps-wb-redis-channel-${meetingId}`);
+    RedisPubSub.meetingWhiteboardSubscribe(`from-akka-apps-wb-redis-channel-${meetingId}`);
+
+    return;
+  }
 
   const {
     recordProp,
@@ -175,9 +189,6 @@ export default function addMeeting(meeting) {
     meetingId,
     ...recordProp,
   }, cbRecord);
-
-  addAnnotationsStreamer(meetingId);
-  addCursorStreamer(meetingId);
 
   return Meetings.upsert(selector, modifier, cb);
 }

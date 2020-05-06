@@ -36,6 +36,7 @@ import java.util.*;
  * @author Werner Randelshofer
  * @version $Id$
  */
+
 public class Bezier {
 
     /** Prevent instance creation. */
@@ -234,8 +235,8 @@ public class Bezier {
      * <p>
      * Corner points are both contained as the last point of a segment and
      * the first point of a subsequent segment.
-     * 
-     * @param digitizedPoints Digitized points 
+     *
+     * @param digitizedPoints Digitized points
      * @param maxAngle maximal angle in radians between the current point and its
      * predecessor and successor up to which the point does not break the
      * digitized list into segments. Recommended value 44° = 44 * 180d / Math.PI

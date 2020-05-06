@@ -27,9 +27,12 @@ const validIOSVersion = () => {
   return true;
 };
 
+const whiteboardConnection = Meteor.settings.public.role ? DDP.connect(`${window.location.origin}/html5client-wb`) : undefined;
+
 export {
   getFontSize,
   meetingIsBreakout,
   getBreakoutRooms,
   validIOSVersion,
+  whiteboardConnection,
 };
